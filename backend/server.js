@@ -3,6 +3,7 @@ const cors = require("cors"); // import cors for CORS issues and it  is a middle
 require("dotenv").config(); // load environment variables from .env file
 const app = express(); // create an express application
 app.use(express.json()); // parse JSON requests
+
 app.use(cors()); // use cors middleware to allow cross-origin requests
 //////////////////////////////
 
@@ -13,14 +14,14 @@ const authRoutes = require("./routes/auth"); // import authentication routes
 const systemsRoutes = require("./routes/systems"); // import systems routes
 // const instrumentsRoutes = require("./routes/instruments"); // import instruments routes
 // const technicalSheetsRoutes = require("./routes/technicalSheets"); // import technical sheets routes
-// const userRoutes = require("./routes/users"); // import user routes
+const userRoutes = require("./routes/users"); // import user routes
 
 // Mount routes:
 app.use("/api/auth", authRoutes);
 app.use("/api/systems", systemsRoutes);
 // app.use("/api/instruments", instrumentsRoutes);
 // app.use("/api/technicalSheets", technicalSheetsRoutes);
-// app.use("/api/users", userRoutes); // mount user routes
+app.use("/api/users", userRoutes); // mount user routes
 
 // app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // serve static files from the uploads directory
 
