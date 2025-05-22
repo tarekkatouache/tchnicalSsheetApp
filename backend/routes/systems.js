@@ -15,10 +15,12 @@ router.post("/", authenticateToken, async (req, res) => {
     const system = await System.create({ name, description });
 
     /////
+    console.log(req.user); // Add this just before the AuditLog.create line
 
     await AuditLog.create({
       userId: req.user.id, // user performing the action (from JWT)
       action: "CREATE",
+      userLogged: req.user.username,
       entity: "System",
       entityId: system.id,
       description: `System created with ${system.name}by ${req.user.name} ${req.user.lastName}`,
