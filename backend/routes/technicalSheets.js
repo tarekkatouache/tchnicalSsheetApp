@@ -8,13 +8,14 @@ const generatePdfFromExcel = require("../utils/generatePdfFromExcel"); // utilit
 const logAction = require("../utils/logAction");
 
 // Upload a technical sheet for an instrument
+// Upload a technical sheet for an instrument
 router.post(
   "/upload",
   authenticateToken,
   upload.single("file"), // expecting "file" field
   async (req, res) => {
     try {
-      const { title, instrumentId } = req.body; // instrument ID from request body
+      const { instrumentId } = req.body; // instrument ID from request body
 
       if (!req.file) {
         return res.status(400).json({ message: "File upload failed" }); // check if file is uploaded
@@ -41,7 +42,15 @@ router.post(
         createdAt: new Date(),
         pdfFilePath,
       });
-
+      //// Log the action
+      // await logAction({
+      //   userId: req.user.id, // ID of the user who uploaded the sheet
+      //   action: "uploaded technical sheet ", // action description
+      //   targetTable: "TechnicalSheets", //
+      //   targetId: sheet.id, // ID of the uploaded sheet
+      // });
+      ///
+      //
       // Send response with the created technical sheet
 
       res.status(201).json({ message: "Technical sheet uploaded", sheet });
