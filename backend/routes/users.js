@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require("../models/User");
 const authenticateToken = require("../middleware/auth");
 const authorizeRole = require("../middleware/authorizeRole"); // custom middleware to check admin role
+const logAction = require("../utils/logAction");
 const AuditLog = require("../models/AuditLog");
 
 // ✅ Get all users (Admin only)
@@ -11,19 +12,9 @@ router.get("/", authenticateToken, authorizeRole("admin"), async (req, res) => {
     const users = await User.findAll({
       attributes: { exclude: ["password"] },
     });
-
-    await AuditLog.create({
-      userId: req.user.id, // user performing the action (from JWT)
-      action: "CREATE",
-      userLogged: req.user.username,
-      entity: "User",
-      entityId: 99999,
-      description: `all Users called by ${req.user.name} ${req.user.lastName}`,
-    });
     res.json(users);
   } catch (error) {
     console.error("Failed to fetch users:", error);
-
     res.status(500).json({
       message: "Server error while fetching users.",
       error: error.message,
@@ -36,79 +27,90 @@ router.get("/me", authenticateToken, async (req, res) => {
   const user = await User.findByPk(req.user.userId, {
     attributes: { exclude: ["password"] },
   });
-  AuditLog.create({
-    userId: req.user.userId, // user performing the action (from JWT)
-    action: "READ",
-    userLogged: req.user.username,
-    entity: "User",
-    entityId: user.id,
-    description: `User ${req.user.username} ${req.user.lastName} fetched their profile`,
-  });
   res.json(user);
 });
-// ✅ Update own profile http://localhost:5000/api/users/profile
-//$$$$$$$$ TO DO $$$$$$$$$$ it doesn't work yet
-// PUT /api/users/profile
-// router.put("/profile", a  uthenticateToken, async (req, res) => {
-//   try {
-//     console.log("REQ.BODY:", req.body);
 
-//     const { name } = req.body;
-//     // const userId = req.user.id;
+// Update profile (Admin and User)
+router.put("/profile", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    console.log("Received body:", req.body);
 
-//     const user = await User.findByPk(req.user.id);
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found." });
-//     }
+    const { name, lastName, jobTitle, service, email, image } = req.body;
 
-//     user.name = name;
-//     // user.lastName = lastName;
+    // Find the user first
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
-//     await user.save();
-//     res.json({ message: "Profile updated successfully", user });
-//   } catch (error) {
-//     console.error("Error updating profile:", error);
-//     res.status(500).json({ message: "Server error updating profile." });
-//   }
-// });
+    // Update allowed fields only
+    user.name = name ?? user.name;
+    user.lastName = lastName ?? user.lastName;
+    user.jobTitle = jobTitle ?? user.jobTitle;
+    user.service = service ?? user.service;
+    user.email = email ?? user.email;
+    user.image = image ?? user.image;
+
+    await user.save();
+
+    // Return updated user without password
+    const updatedUser = await User.findByPk(userId, {
+      attributes: { exclude: ["password"] },
+    });
+
+    await AuditLog.create({
+      userId: user.id, // the user performing the action
+      action: "UPDATE",
+      entity: "User",
+      entityId: user.id,
+      description: `User ${
+        user.username
+      } updated their profile from ${JSON.stringify(
+        req.body
+      )} to ${JSON.stringify(updatedUser)}  `,
+    });
+
+    res.json({ message: "Profile updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ message: "Server error updating profile." });
+  }
+});
 
 // update role (Admin only)
 // PUT /api/users/:id/role
 router.put(
-  "/users/:id/role",
+  "/:id/role",
   authenticateToken,
-  authorizeRole("admin"), // only admin can change roles
+  authorizeRole("admin"),
   async (req, res) => {
+    console.log("Updating user role...");
+    const { role } = req.body;
+    const { id } = req.params;
+
     try {
-      const { role } = req.body;
-      const userIdToChange = req.params.id;
+      const user = await User.findByPk(id);
+      if (!user) return res.status(404).json({ message: "User not found" });
 
-      // 🟡 Step 1: Find the target user
-      const targetUser = await User.findByPk(userIdToChange);
-      if (!targetUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      oldRole = user.role; // Store old role for audit log
+      user.role = role;
+      console.log("User role before save:", user.role);
 
-      const oldRole = targetUser.role;
+      await user.save();
 
-      // 🟡 Step 2: Update the role
-      targetUser.role = role;
-      await targetUser.save();
-
-      // 🟡 Step 3: Log the change
-      await logAction({
-        userId: req.user.userId, // user performing the action (from JWT)
-        action: "READ",
-        userLogged: req.user.username,
+      // Audit Log
+      await AuditLog.create({
+        userId: user.id, // the user performing the action
+        action: "UPDATE",
         entity: "User",
         entityId: user.id,
-        description: `User ${req.user.username} changed role of user ${targetUser.username} from ${oldRole} to ${role}`,
+        description: ` User ${user.username} - ${user.lastName} role changed from ${oldRole} to ${role} by ${req.user.username}`,
       });
 
-      res.json({ message: "User role updated successfully", targetUser });
+      res.status(200).json({ message: "Role updated successfully", user });
     } catch (error) {
-      console.error("Error updating role:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   }
 );

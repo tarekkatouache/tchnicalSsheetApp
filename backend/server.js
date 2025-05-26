@@ -12,15 +12,15 @@ app.use(cors()); // use cors middleware to allow cross-origin requests
 // 💡 Routes
 const authRoutes = require("./routes/auth"); // import authentication routes
 const systemsRoutes = require("./routes/systems"); // import systems routes
-// const instrumentsRoutes = require("./routes/instruments"); // import instruments routes
-// const technicalSheetsRoutes = require("./routes/technicalSheets"); // import technical sheets routes
+const instrumentsRoutes = require("./routes/instruments"); // import instruments routes
+const technicalSheetsRoutes = require("./routes/technicalSheets"); // import technical sheets routes
 const userRoutes = require("./routes/users"); // import user routes
 
 // Mount routes:
 app.use("/api/auth", authRoutes);
 app.use("/api/systems", systemsRoutes);
-// app.use("/api/instruments", instrumentsRoutes);
-// app.use("/api/technicalSheets", technicalSheetsRoutes);
+app.use("/api/instruments", instrumentsRoutes);
+app.use("/api/technicalSheets", technicalSheetsRoutes);
 app.use("/api/users", userRoutes); // mount user routes
 
 // app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // serve static files from the uploads directory
@@ -31,8 +31,8 @@ const PORT = process.env.PORT || 5000; // set the port from environment variable
 const sequelize = require("./db");
 const User = require("./models/User");
 const System = require("./models/System");
-// const Instrument = require("./models/Instrument");
-// const TechnicalSheet = require("./models/TechnicalSheet");
+const Instrument = require("./models/Instrument");
+const TechnicalSheet = require("./models/TechnicalSheet");
 
 // Sync database
 sequelize
