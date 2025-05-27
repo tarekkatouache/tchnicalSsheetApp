@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../db.js"); // this  point tp db.js file
+const TechnicalSheetData = require("./TechnicalSheetData");
 
 const TechnicalSheet = sequelize.define(
   "TechnicalSheet",
@@ -48,5 +49,9 @@ const TechnicalSheet = sequelize.define(
     paranoid: true,
   }
 );
+TechnicalSheet.hasMany(TechnicalSheetData, { foreignKey: "technicalSheetId" });
+TechnicalSheetData.belongsTo(TechnicalSheet, {
+  foreignKey: "technicalSheetId",
+});
 
 module.exports = TechnicalSheet;
